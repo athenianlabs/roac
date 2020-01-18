@@ -17,21 +17,12 @@ func main() {
 		fatal("unable to open file %s: %v\n", os.Args[1], err)
 	}
 	InFile = bufio.NewReader(file)
-	scanfile()
+	scan(CurrentToken) // Get the first token from the input
+	n := binexpr()     // Parse the expression in the file
+	fmt.Printf("%d\n", interpretAST(n))
 }
 
 var tokenStrings = []string{"+", "-", "*", "/", "intlit"}
-
-func scanfile() {
-	t := &Token{}
-	for scan(t) {
-		fmt.Printf("Token %s", tokenStrings[t.token])
-		if t.token == TokenIntLiteral {
-			fmt.Printf(", value %d", t.value)
-		}
-		fmt.Printf("\n")
-	}
-}
 
 func fatal(s string, args ...interface{}) {
 	fmt.Fprintf(os.Stderr, s, args...)

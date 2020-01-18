@@ -12,7 +12,8 @@ type TokenType int
 
 // Tokens
 const (
-	TokenPlus TokenType = iota
+	TokenEOF TokenType = iota
+	TokenPlus
 	TokenMinus
 	TokenStar
 	TokenSlash
@@ -84,7 +85,6 @@ func scanint(c rune) int {
 		val = val*10 + k
 		c = next()
 	}
-
 	// We hit a non-integer character, put it back.
 	putback(c)
 	return val
@@ -99,6 +99,7 @@ func scan(t *Token) bool {
 	// the input character
 	switch c {
 	case EOF:
+		t.token = TokenEOF
 		return false
 	case '+':
 		t.token = TokenPlus
