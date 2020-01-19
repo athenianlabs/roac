@@ -18,11 +18,9 @@ func main() {
 	}
 	InFile = bufio.NewReader(file)
 	scan(CurrentToken) // Get the first token from the input
-	n := binexpr()     // Parse the expression in the file
+	n := binexpr(0)    // Parse the expression in the file
 	fmt.Printf("%d\n", interpretAST(n))
 }
-
-var tokenStrings = []string{"+", "-", "*", "/", "intlit"}
 
 func fatal(s string, args ...interface{}) {
 	fmt.Fprintf(os.Stderr, s, args...)

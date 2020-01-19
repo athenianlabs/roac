@@ -1,9 +1,5 @@
 package main
 
-import (
-	"fmt"
-)
-
 var CurrentToken *Token = &Token{}
 
 // Node Type
@@ -62,23 +58,17 @@ func interpretAST(node *ASTNode) int {
 		rightval = interpretAST(node.right)
 	}
 
-	// Debug: Print what we are about to do
-	if node.op == NodeIntLiteral {
-		fmt.Printf("int %d\n", node.value)
-	} else {
-		fmt.Printf("%d %s %d\n", leftval, ASTop[node.op], rightval)
-	}
 	switch node.op {
 	case NodeAdd:
-		return (leftval + rightval)
+		return leftval + rightval
 	case NodeSubtract:
-		return (leftval - rightval)
+		return leftval - rightval
 	case NodeMultiply:
-		return (leftval * rightval)
+		return leftval * rightval
 	case NodeDivide:
-		return (leftval / rightval)
+		return leftval / rightval
 	case NodeIntLiteral:
-		return (node.value)
+		return node.value
 	default:
 		fatal("unknown AST operator %d\n", node.op)
 		return 0
@@ -120,20 +110,54 @@ func arithop(t TokenType) NodeType {
 }
 
 // Return an AST tree whose root is a binary operator
-func binexpr() *ASTNode {
+func binexpr(previousTokenPrecedence int) *ASTNode {
 	// Get the integer literal on the left.
 	// Fetch the next token at the same time.
 	left := primary()
+	tokenType := CurrentToken.token
 	// If no tokens left, return just the left node
-	if CurrentToken.token == TokenEOF {
+	if tokenType == TokenEOF {
 		return left
 	}
-	// Convert the token into a node type
-	nodetype := arithop(CurrentToken.token)
-	// Get the next token in
-	scan(CurrentToken)
-	// Recursively get the right-hand tree
-	right := binexpr()
-	// Now build a tree with both sub-trees
-	return NewASTNode(nodetype, left, right, 0)
+	// While the precedence of this token is
+	// more than that of the previous token precedence
+	for OpPrecedence(tokenType) > previousTokenPrecedence {
+		// Fetch in the next integer literal
+		scan(CurrentToken)
+		// Recursively call binexpr() with the
+		// precedence of our token to build a sub-tree
+		right := binexpr(OperatorPrecedence[tokenType])
+		// Join that sub-tree with ours. Convert the token
+		// into an AST operation at the same time.
+		left = NewASTNode(arithop(tokenType), left, right, 0)
+		// Update the details of the current token.
+		tokenType = CurrentToken.token
+		// If no tokens left, return just the left node
+		if tokenType == TokenEOF {
+			return left
+		}
+	}
+	// Return the tree we have when the precedence
+	// is the same or lower
+	return left
+}
+
+// Operator precedence for each token
+var OperatorPrecedence = map[TokenType]int{
+	TokenEOF:        0,
+	TokenPlus:       10,
+	TokenMinus:      10,
+	TokenStar:       20,
+	TokenSlash:      20,
+	TokenIntLiteral: 0,
+}
+
+// Check that we have a binary operator and
+// return its precedence.
+func OpPrecedence(t TokenType) int {
+	prec := OperatorPrecedence[t]
+	if prec == 0 {
+		fatal("syntax error on line %d, token %d\n", Line, t)
+	}
+	return prec
 }
