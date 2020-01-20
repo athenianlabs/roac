@@ -75,7 +75,7 @@ func cgpostamble() {
 
 // Load an integer literal value into a register.
 // Return the number of the register
-func cgload(value int) int {
+func cgloadint(value int) int {
 	// Get a new register
 	r := alloc_register()
 	// Print out the code to initialise it
@@ -123,4 +123,25 @@ func cgprintint(r int) {
 	OutFile.WriteString(fmt.Sprintf("\tmovq\t%s, %%rdi\n", reglist[r]))
 	OutFile.WriteString("\tcall\tprintint\n")
 	free_register(r)
+}
+
+// Load a value from a variable into a register.
+// Return the number of the register
+func cgloadglob(ident string) int {
+	// Get a new register
+	r := alloc_register()
+	// Print out the code to initialise it
+	OutFile.WriteString(fmt.Sprintf("\tmovq\t%s(%%rip), %s\n", ident, reglist[r]))
+	return r
+}
+
+// Store a register's value into a variable
+func cgstorglob(r int, ident string) int {
+	OutFile.WriteString(fmt.Sprintf("\tmovq\t%s, %s(%%rip)\n", reglist[r], ident))
+	return r
+}
+
+// Generate a global symbol
+func cgglobsym(sym string) {
+	OutFile.WriteString(fmt.Sprintf("\t.comm\t%s,8,8\n", sym))
 }

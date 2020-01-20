@@ -19,7 +19,12 @@ const (
 	TokenSlash
 	TokenIntLiteral
 	TokenSemicolon
+	TokenEquals
+
+	TokenIdent
+
 	TokenPrint
+	TokenInt
 )
 
 // Token structure
@@ -31,6 +36,7 @@ type Token struct {
 var (
 	Line    int  = 1
 	Putback rune = '\n'
+	Text         = ""
 )
 
 const (
@@ -132,8 +138,13 @@ func semi() {
 	match(TokenSemicolon, ";")
 }
 
+func ident() {
+	match(TokenIdent, "identifier")
+}
+
 var Keywords = map[string]TokenType{
 	"print": TokenPrint,
+	"int":   TokenInt,
 }
 
 // Scan and return the next token found in the input.
@@ -157,18 +168,21 @@ func scan(t *Token) bool {
 		t.token = TokenSlash
 	case ';':
 		t.token = TokenSemicolon
+	case '=':
+		t.token = TokenEquals
 	default:
 		if unicode.IsDigit(c) {
 			t.value = scanint(c)
 			t.token = TokenIntLiteral
 			break
 		} else if unicode.IsLetter(c) || c == '_' {
-			text := scanident(c, MaxIdentLength)
-			tokenType, exists := Keywords[text]
-			if !exists {
-				fatal("unrecognized symbol %s on line %d\n", text, Line)
+			Text = scanident(c, MaxIdentLength)
+			tokenType, exists := Keywords[Text]
+			if exists {
+				t.token = tokenType
+			} else {
+				t.token = TokenIdent
 			}
-			t.token = tokenType
 		} else {
 			fatal("unrecognized character %c on line %d\n", c, Line)
 		}

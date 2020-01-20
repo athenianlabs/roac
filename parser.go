@@ -12,6 +12,10 @@ const (
 	NodeMultiply
 	NodeDivide
 	NodeIntLiteral
+
+	NodeIdent
+	NodeLvIdent
+	NodeAssign
 )
 
 // Abstract Syntax Tree structure
@@ -41,55 +45,28 @@ func NewUnaryASTNode(op NodeType, left *ASTNode, value int) *ASTNode {
 	return NewASTNode(op, left, nil, value)
 }
 
-// List of AST operators
-var ASTop = []string{"+", "-", "*", "/"}
-
-// Given an AST, interpret the
-// operators in it and return
-// a final value.
-func interpretAST(node *ASTNode) int {
-	leftval, rightval := 0, 0
-
-	// Get the left and right sub-tree values
-	if node.left != nil {
-		leftval = interpretAST(node.left)
-	}
-	if node.right != nil {
-		rightval = interpretAST(node.right)
-	}
-
-	switch node.op {
-	case NodeAdd:
-		return leftval + rightval
-	case NodeSubtract:
-		return leftval - rightval
-	case NodeMultiply:
-		return leftval * rightval
-	case NodeDivide:
-		return leftval / rightval
-	case NodeIntLiteral:
-		return node.value
-	default:
-		fatal("unknown AST operator %d\n", node.op)
-		return 0
-	}
-}
-
 // Parse a primary factor and return an
 // AST node representing it.
 func primary() *ASTNode {
+	node := &ASTNode{}
 	// For an INTLIT token, make a leaf AST node for it
 	// and scan in the next token. Otherwise, a syntax error
 	// for any other token type.
 	switch CurrentToken.token {
 	case TokenIntLiteral:
-		n := NewLeafASTNode(NodeIntLiteral, CurrentToken.value)
-		scan(CurrentToken)
-		return n
+		node = NewLeafASTNode(NodeIntLiteral, CurrentToken.value)
+	case TokenIdent:
+		id, ok := GetSymbolIDByString(Text)
+		if !ok {
+			fatal("unknown variable %s\n", Text)
+		}
+		node = NewLeafASTNode(NodeIdent, id)
 	default:
 		fatal("syntax error on line %d\n", Line)
 		return nil
 	}
+	scan(CurrentToken)
+	return node
 }
 
 // Convert a token into an AST operation.

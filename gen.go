@@ -3,14 +3,14 @@ package main
 // Given an AST, interpret the
 // operators in it and return
 // a final value.
-func generateAST(node *ASTNode) int {
+func generateAST(node *ASTNode, reg int) int {
 	leftreg, rightreg := 0, 0
 	// Get the left and right sub-tree values
 	if node.left != nil {
-		leftreg = generateAST(node.left)
+		leftreg = generateAST(node.left, -1)
 	}
 	if node.right != nil {
-		rightreg = generateAST(node.right)
+		rightreg = generateAST(node.right, leftreg)
 	}
 	switch node.op {
 	case NodeAdd:
@@ -22,7 +22,16 @@ func generateAST(node *ASTNode) int {
 	case NodeDivide:
 		return cgdiv(leftreg, rightreg)
 	case NodeIntLiteral:
-		return cgload(node.value)
+		return cgloadint(node.value)
+	case NodeIdent:
+		name, _ := GetSymbolByID(node.value)
+		return cgloadglob(name)
+	case NodeLvIdent:
+		name, _ := GetSymbolByID(node.value)
+		return cgstorglob(reg, name)
+	case NodeAssign:
+		// The work has already been done, return the result
+		return rightreg
 	default:
 		fatal("unknown AST operator %d\n", node.op)
 		return 0
@@ -43,4 +52,8 @@ func genfreeregs() {
 
 func genprintint(reg int) {
 	cgprintint(reg)
+}
+
+func genglobsym(s string) {
+	cgglobsym(s)
 }
