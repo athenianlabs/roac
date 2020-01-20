@@ -116,7 +116,7 @@ func binexpr(previousTokenPrecedence int) *ASTNode {
 	left := primary()
 	tokenType := CurrentToken.token
 	// If no tokens left, return just the left node
-	if tokenType == TokenEOF {
+	if tokenType == TokenSemicolon {
 		return left
 	}
 	// While the precedence of this token is
@@ -133,7 +133,7 @@ func binexpr(previousTokenPrecedence int) *ASTNode {
 		// Update the details of the current token.
 		tokenType = CurrentToken.token
 		// If no tokens left, return just the left node
-		if tokenType == TokenEOF {
+		if tokenType == TokenSemicolon {
 			return left
 		}
 	}

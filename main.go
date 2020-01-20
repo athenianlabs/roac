@@ -29,10 +29,11 @@ func main() {
 	defer outFile.Close()
 	OutFile = bufio.NewWriter(outFile)
 
-	scan(CurrentToken) // Get the first token from the input
-	n := binexpr(0)    // Parse the expression in the file
-	fmt.Printf("%d\n", interpretAST(n))
-	generatecode(n)
+	scan(CurrentToken)
+	genpreamble()
+	statements()
+	genpostamble()
+
 	if err := OutFile.Flush(); err != nil {
 		fatal("unable to write to out.s: %v\n", err)
 	}

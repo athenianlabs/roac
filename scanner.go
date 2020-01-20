@@ -18,6 +18,8 @@ const (
 	TokenStar
 	TokenSlash
 	TokenIntLiteral
+	TokenSemicolon
+	TokenPrint
 )
 
 // Token structure
@@ -32,7 +34,8 @@ var (
 )
 
 const (
-	EOF rune = -1
+	EOF            rune = -1
+	MaxIdentLength int  = 512
 )
 
 // Get the next character from the input file.
@@ -90,6 +93,49 @@ func scanint(c rune) int {
 	return val
 }
 
+// Scan an identifier from the input file and
+// store it in buf[]. Return the identifier's length
+func scanident(c rune, lim int) string {
+	i := 0
+	buf := make([]rune, 0)
+	// Allow digits, alpha and underscores
+	for unicode.IsLetter(c) || unicode.IsDigit(c) || c == '_' {
+		// Error if we hit the identifier length limit,
+		// else append to buf[] and get next character
+		if lim-1 == i {
+			fatal("identifier too long on line %d\n", Line)
+		} else if i < lim-1 {
+			buf = append(buf, c)
+			i++
+		}
+		c = next()
+	}
+	// We hit a non-valid character, put it back.
+	// NUL-terminate the buf[] and return the length
+	putback(c)
+	return string(buf)
+}
+
+// Ensure that the current token is t,
+// and fetch the next token. Otherwise
+// throw an error
+func match(t TokenType, s string) {
+	if t == CurrentToken.token {
+		scan(CurrentToken)
+	} else {
+		fatal("%s expected on line %d\n", s, Line)
+	}
+}
+
+// Match a semicon and fetch the next token
+func semi() {
+	match(TokenSemicolon, ";")
+}
+
+var Keywords = map[string]TokenType{
+	"print": TokenPrint,
+}
+
 // Scan and return the next token found in the input.
 // Return 1 if token valid, 0 if no tokens left.
 func scan(t *Token) bool {
@@ -109,16 +155,23 @@ func scan(t *Token) bool {
 		t.token = TokenStar
 	case '/':
 		t.token = TokenSlash
+	case ';':
+		t.token = TokenSemicolon
 	default:
-		// If it's a digit, scan the
-		// literal integer value in
 		if unicode.IsDigit(c) {
 			t.value = scanint(c)
 			t.token = TokenIntLiteral
 			break
+		} else if unicode.IsLetter(c) || c == '_' {
+			text := scanident(c, MaxIdentLength)
+			tokenType, exists := Keywords[text]
+			if !exists {
+				fatal("unrecognized symbol %s on line %d\n", text, Line)
+			}
+			t.token = tokenType
+		} else {
+			fatal("unrecognized character %c on line %d\n", c, Line)
 		}
-		fatal("unrecognized character %c on line %d\n", c, Line)
 	}
-	// We found a token
 	return true
 }

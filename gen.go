@@ -29,10 +29,18 @@ func generateAST(node *ASTNode) int {
 	}
 }
 
-func generatecode(n *ASTNode) {
-	reg := 0
+func genpreamble() {
 	cgpreamble()
-	reg = generateAST(n)
-	cgprintint(reg)
+}
+
+func genpostamble() {
 	cgpostamble()
+}
+
+func genfreeregs() {
+	freeall_registers()
+}
+
+func genprintint(reg int) {
+	cgprintint(reg)
 }
