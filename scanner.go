@@ -27,6 +27,14 @@ const (
 	TokenGreaterThan                  // >
 	TokenGreaterThanOrEqual           // >=
 
+	TokenLeftBrace  // {
+	TokenRightBrace // }
+	TokenLeftParen  // (
+	TokenRightParen // )
+
+	TokenIf   // if
+	TokenElse // else
+
 	TokenIdent // x
 
 	TokenPrint // print
@@ -148,9 +156,27 @@ func ident() {
 	match(TokenIdent, "identifier")
 }
 
+func lbrace() {
+	match(TokenLeftBrace, "{")
+}
+
+func rbrace() {
+	match(TokenRightBrace, "}")
+}
+
+func lparen() {
+	match(TokenLeftParen, "(")
+}
+
+func rparen() {
+	match(TokenRightParen, ")")
+}
+
 var Keywords = map[string]TokenType{
 	"print": TokenPrint,
 	"int":   TokenInt,
+	"if":    TokenIf,
+	"else":  TokenElse,
 }
 
 // Scan and return the next token found in the input.
@@ -174,6 +200,17 @@ func scan(t *Token) bool {
 		t.token = TokenSlash
 	case ';':
 		t.token = TokenSemicolon
+	case '{':
+		t.token = TokenLeftBrace
+		break
+	case '}':
+		t.token = TokenRightBrace
+		break
+	case '(':
+		t.token = TokenLeftParen
+		break
+	case ')':
+		t.token = TokenRightParen
 	case '=':
 		c = next()
 		if c == '=' {

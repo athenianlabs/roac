@@ -2,13 +2,13 @@ package main
 
 import "fmt"
 
-// Code generator for x86-64
-// Copyright (c) 2019 Warren Toomey, GPL3
+const NoReg = -1
 
 // List of available registers
 // and their names
 var freereg = [4]int{}
 var reglist = [4]string{"%r8", "%r9", "%r10", "%r11"}
+var breglist = [4]string{"%r8b", "%r9b", "%r10b", "%r11b"}
 
 // Set all registers as available
 func freeall_registers() {
@@ -146,35 +146,59 @@ func cgglobsym(sym string) {
 	OutFile.WriteString(fmt.Sprintf("\t.comm\t%s,8,8\n", sym))
 }
 
-// Compare two registers.
-func cgcompare(r1, r2 int, how string) int {
+// List of comparison instructions,
+// in AST order: A_EQ, A_NE, A_LT, A_GT, A_LE, A_GE
+var cmplist = []string{
+	"sete",
+	"setne",
+	"setl",
+	"setg",
+	"setle",
+	"setge",
+}
+
+// Compare two registers and set if true.
+func cgcompare_and_set(ASTop NodeType, r1, r2 int) int {
+	// Check the range of the AST operation
+	if ASTop < NodeEqual || ASTop > NodeGreaterThanOrEqual {
+		fatal("dad AST Op in cgcompare_and_set()\n")
+	}
 	OutFile.WriteString(fmt.Sprintf("\tcmpq\t%s, %s\n", reglist[r2], reglist[r1]))
-	OutFile.WriteString(fmt.Sprintf("\t%s\t%sb\n", how, reglist[r2]))
-	OutFile.WriteString(fmt.Sprintf("\tandq\t$255,%s\n", reglist[r2]))
+	OutFile.WriteString(fmt.Sprintf("\t%s\t%s\n", cmplist[ASTop-NodeEqual], breglist[r2]))
+	OutFile.WriteString(fmt.Sprintf("\tmovzbq\t%s, %s\n", breglist[r2], reglist[r2]))
 	free_register(r1)
-	return r2
+	return (r2)
 }
 
-func cgequal(r1, r2 int) int {
-	return cgcompare(r1, r2, "sete")
+// List of inverted jump instructions,
+// in AST order: A_EQ, A_NE, A_LT, A_GT, A_LE, A_GE
+var invertedcmplist = []string{
+	"jne",
+	"je",
+	"jge",
+	"jle",
+	"jg",
+	"jl",
 }
 
-func cgnotequal(r1, r2 int) int {
-	return cgcompare(r1, r2, "setne")
+// Compare two registers and jump if false.
+func cgcompare_and_jump(ASTop NodeType, r1, r2, label int) int {
+	// Check the range of the AST operation
+	if ASTop < NodeEqual || ASTop > NodeGreaterThanOrEqual {
+		fatal("bad AST Op in cgcompare_and_jump()\n")
+	}
+	OutFile.WriteString(fmt.Sprintf("\tcmpq\t%s, %s\n", reglist[r2], reglist[r1]))
+	OutFile.WriteString(fmt.Sprintf("\t%s\tL%d\n", invertedcmplist[ASTop-NodeEqual], label))
+	freeall_registers()
+	return NoReg
 }
 
-func cglessthan(r1, r2 int) int {
-	return cgcompare(r1, r2, "setl")
+// Generate a label
+func cglabel(l int) {
+	OutFile.WriteString(fmt.Sprintf("L%d:\n", l))
 }
 
-func cggreaterthan(r1, r2 int) int {
-	return cgcompare(r1, r2, "setg")
-}
-
-func cglessequal(r1, r2 int) int {
-	return cgcompare(r1, r2, "setle")
-}
-
-func cggreaterequal(r1, r2 int) int {
-	return cgcompare(r1, r2, "setge")
+// Generate a jump to a label
+func cgjump(l int) {
+	OutFile.WriteString(fmt.Sprintf("\tjmp\tL%d\n", l))
 }

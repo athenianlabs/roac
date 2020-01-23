@@ -31,7 +31,8 @@ func main() {
 
 	scan(CurrentToken)
 	genpreamble()
-	statements()
+	tree := compoundStatement()
+	generateAST(tree, NoReg, 0)
 	genpostamble()
 
 	if err := OutFile.Flush(); err != nil {
