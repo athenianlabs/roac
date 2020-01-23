@@ -13,6 +13,13 @@ const (
 	NodeDivide
 	NodeIntLiteral
 
+	NodeEqual
+	NodeNotEqual
+	NodeLessThan
+	NodeLessThanOrEqual
+	NodeGreaterThan
+	NodeGreaterThanOrEqual
+
 	NodeIdent
 	NodeLvIdent
 	NodeAssign
@@ -80,6 +87,18 @@ func arithop(t TokenType) NodeType {
 		return NodeMultiply
 	case TokenSlash:
 		return NodeDivide
+	case TokenEqual:
+		return NodeEqual
+	case TokenNotEqual:
+		return NodeNotEqual
+	case TokenLessThan:
+		return NodeLessThan
+	case TokenLessThanOrEqual:
+		return NodeLessThanOrEqual
+	case TokenGreaterThan:
+		return NodeGreaterThan
+	case TokenGreaterThanOrEqual:
+		return NodeGreaterThanOrEqual
 	default:
 		fatal("unknown token in arithop() on line %d\n", Line)
 		return 0
@@ -121,12 +140,18 @@ func binexpr(previousTokenPrecedence int) *ASTNode {
 
 // Operator precedence for each token
 var OperatorPrecedence = map[TokenType]int{
-	TokenEOF:        0,
-	TokenPlus:       10,
-	TokenMinus:      10,
-	TokenStar:       20,
-	TokenSlash:      20,
-	TokenIntLiteral: 0,
+	TokenEOF:   0,
+	TokenPlus:  10,
+	TokenMinus: 10,
+	TokenStar:  20,
+	TokenSlash: 20,
+	// TokenIntLiteral:         0,
+	TokenEqual:              30,
+	TokenNotEqual:           30,
+	TokenLessThan:           40,
+	TokenLessThanOrEqual:    40,
+	TokenGreaterThan:        40,
+	TokenGreaterThanOrEqual: 40,
 }
 
 // Check that we have a binary operator and

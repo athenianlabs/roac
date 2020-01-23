@@ -27,9 +27,6 @@ func varDeclaration() {
 }
 
 func assignmentStatement() {
-	// struct ASTnode *left, *right, *tree;
-	// int id;
-
 	// Ensure we have an identifier
 	ident()
 
@@ -40,7 +37,7 @@ func assignmentStatement() {
 	right := NewLeafASTNode(NodeLvIdent, id)
 
 	// Ensure we have an equals sign
-	match(TokenEquals, "=")
+	match(TokenAssign, "=")
 
 	// Parse the following expression
 	left := binexpr(0)

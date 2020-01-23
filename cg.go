@@ -145,3 +145,36 @@ func cgstorglob(r int, ident string) int {
 func cgglobsym(sym string) {
 	OutFile.WriteString(fmt.Sprintf("\t.comm\t%s,8,8\n", sym))
 }
+
+// Compare two registers.
+func cgcompare(r1, r2 int, how string) int {
+	OutFile.WriteString(fmt.Sprintf("\tcmpq\t%s, %s\n", reglist[r2], reglist[r1]))
+	OutFile.WriteString(fmt.Sprintf("\t%s\t%sb\n", how, reglist[r2]))
+	OutFile.WriteString(fmt.Sprintf("\tandq\t$255,%s\n", reglist[r2]))
+	free_register(r1)
+	return r2
+}
+
+func cgequal(r1, r2 int) int {
+	return cgcompare(r1, r2, "sete")
+}
+
+func cgnotequal(r1, r2 int) int {
+	return cgcompare(r1, r2, "setne")
+}
+
+func cglessthan(r1, r2 int) int {
+	return cgcompare(r1, r2, "setl")
+}
+
+func cggreaterthan(r1, r2 int) int {
+	return cgcompare(r1, r2, "setg")
+}
+
+func cglessequal(r1, r2 int) int {
+	return cgcompare(r1, r2, "setle")
+}
+
+func cggreaterequal(r1, r2 int) int {
+	return cgcompare(r1, r2, "setge")
+}

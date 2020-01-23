@@ -32,6 +32,18 @@ func generateAST(node *ASTNode, reg int) int {
 	case NodeAssign:
 		// The work has already been done, return the result
 		return rightreg
+	case NodeEqual:
+		return cgequal(leftreg, rightreg)
+	case NodeNotEqual:
+		return cgnotequal(leftreg, rightreg)
+	case NodeLessThan:
+		return cglessthan(leftreg, rightreg)
+	case NodeGreaterThan:
+		return cggreaterthan(leftreg, rightreg)
+	case NodeLessThanOrEqual:
+		return cglessequal(leftreg, rightreg)
+	case NodeGreaterThanOrEqual:
+		return cggreaterequal(leftreg, rightreg)
 	default:
 		fatal("unknown AST operator %d\n", node.op)
 		return 0

@@ -12,19 +12,25 @@ type TokenType int
 
 // Tokens
 const (
-	TokenEOF TokenType = iota
-	TokenPlus
-	TokenMinus
-	TokenStar
-	TokenSlash
-	TokenIntLiteral
-	TokenSemicolon
-	TokenEquals
+	TokenEOF                TokenType = iota
+	TokenPlus                         // +
+	TokenMinus                        // -
+	TokenStar                         // *
+	TokenSlash                        // /
+	TokenIntLiteral                   // 0
+	TokenSemicolon                    // ;
+	TokenAssign                       // =
+	TokenEqual                        // ==
+	TokenNotEqual                     // !=
+	TokenLessThan                     // <
+	TokenLessThanOrEqual              // <=
+	TokenGreaterThan                  // >
+	TokenGreaterThanOrEqual           // >=
 
-	TokenIdent
+	TokenIdent // x
 
-	TokenPrint
-	TokenInt
+	TokenPrint // print
+	TokenInt   //int
 )
 
 // Token structure
@@ -169,7 +175,37 @@ func scan(t *Token) bool {
 	case ';':
 		t.token = TokenSemicolon
 	case '=':
-		t.token = TokenEquals
+		c = next()
+		if c == '=' {
+			t.token = TokenEqual
+		} else {
+			putback(c)
+			t.token = TokenAssign
+		}
+	case '!':
+		c = next()
+		if c == '=' {
+			t.token = TokenNotEqual
+		} else {
+			fatal("unrecognized character %c\n", c)
+		}
+	case '<':
+		c = next()
+		if c == '=' {
+			t.token = TokenLessThanOrEqual
+		} else {
+			putback(c)
+			t.token = TokenLessThan
+		}
+		break
+	case '>':
+		c = next()
+		if c == '=' {
+			t.token = TokenGreaterThanOrEqual
+		} else {
+			putback(c)
+			t.token = TokenGreaterThan
+		}
 	default:
 		if unicode.IsDigit(c) {
 			t.value = scanint(c)
