@@ -29,11 +29,15 @@ func main() {
 	defer outFile.Close()
 	OutFile = bufio.NewWriter(outFile)
 
-	scan(CurrentToken)
-	genpreamble()
-	tree := compoundStatement()
-	generateAST(tree, NoReg, 0)
-	genpostamble()
+	scan(CurrentToken) // Get the first token from the input
+	genpreamble()      // Output the preamble
+	for {              // Parse a function and
+		tree := functionDeclaration()
+		generateAST(tree, NoReg, 0)         // generate the assembly code for it
+		if CurrentToken.token == TokenEOF { // Stop when we have reached EOF
+			break
+		}
+	}
 
 	if err := OutFile.Flush(); err != nil {
 		fatal("unable to write to out.s: %v\n", err)

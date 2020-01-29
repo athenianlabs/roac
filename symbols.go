@@ -5,10 +5,11 @@ const MaxSymbols = 1024
 var symbolTable = make(map[int]string, MaxSymbols)
 var inverseSymbolTable = make(map[string]int, MaxSymbols)
 
-func AddSymbol(s string) {
+func AddSymbol(s string) int {
 	id := len(symbolTable)
 	symbolTable[id] = s
 	inverseSymbolTable[s] = id
+	return id
 }
 
 func GetSymbolByID(id int) (string, bool) {

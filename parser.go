@@ -23,6 +23,7 @@ const (
 	NodeGlue
 	NodeIf
 	NodeWhile
+	NodeFunction
 
 	NodeIdent
 	NodeLvIdent

@@ -59,11 +59,6 @@ func cgpreamble() {
 	OutFile.WriteString("\tleave\n")
 	OutFile.WriteString("\tret\n")
 	OutFile.WriteString("\n")
-	OutFile.WriteString("\t.globl\tmain\n")
-	OutFile.WriteString("\t.type\tmain, @function\n")
-	OutFile.WriteString("main:\n")
-	OutFile.WriteString("\tpushq\t%rbp\n")
-	OutFile.WriteString("\tmovq	%rsp, %rbp\n")
 }
 
 // Print out the assembly postamble
@@ -203,4 +198,21 @@ func cglabel(l int) {
 // Generate a jump to a label
 func cgjump(l int) {
 	OutFile.WriteString(fmt.Sprintf("\tjmp\tL%d\n", l))
+}
+
+// Print out a function preamble
+func cgfuncpreamble(name string) {
+	OutFile.WriteString("\t.text\n")
+	OutFile.WriteString(fmt.Sprintf("\t.globl\t%s\n", name))
+	OutFile.WriteString(fmt.Sprintf("\t.type\t%s, @function\n", name))
+	OutFile.WriteString(fmt.Sprintf("%s:\n", name))
+	OutFile.WriteString("\tpushq\t%rbp\n")
+	OutFile.WriteString("\tmovq\t%rsp, %rbp\n")
+}
+
+// Print out a function postamble
+func cgfuncpostamble() {
+	OutFile.WriteString("\tmovl $0, %eax\n")
+	OutFile.WriteString("\tpopq     %rbp\n")
+	OutFile.WriteString("\tret\n")
 }

@@ -141,6 +141,23 @@ func forStatement() *ASTNode {
 	return NewASTNode(NodeGlue, preopAST, nil, tree, 0)
 }
 
+// Parse the declaration of a simplistic function
+func functionDeclaration() *ASTNode {
+	// Find the 'void', the identifier, and the '(' ')'.
+	// For now, do nothing with them
+	match(TokenVoid, "void")
+	ident()
+	nameslot := AddSymbol(Text)
+	lparen()
+	rparen()
+
+	// Get the AST tree for the compound statement
+	tree := compoundStatement()
+	// Return an A_FUNCTION node which has the function's nameslot
+	// and the compound statement sub-tree
+	return NewUnaryASTNode(NodeFunction, tree, nameslot)
+}
+
 // Parse a compound statement
 // and return its AST
 func compoundStatement() *ASTNode {

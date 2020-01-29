@@ -63,6 +63,16 @@ func generateAST(node *ASTNode, reg int, parentASTOp NodeType) int {
 		genprintint(leftreg)
 		genfreeregs()
 		return NoReg
+	case NodeFunction:
+		// Generate the function's preamble before the code
+		name, ok := GetSymbolByID(node.value)
+		if !ok {
+			fatal("unknown symbol id %d\n", node.value)
+		}
+		cgfuncpreamble(name)
+		generateAST(node.left, NoReg, node.op)
+		cgfuncpostamble()
+		return NoReg
 	default:
 		fatal("unknown AST operator %d\n", node.op)
 		return 0
