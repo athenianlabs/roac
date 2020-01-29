@@ -32,8 +32,10 @@ const (
 	TokenLeftParen  // (
 	TokenRightParen // )
 
-	TokenIf   // if
-	TokenElse // else
+	TokenIf    // if
+	TokenElse  // else
+	TokenWhile // while
+	TokenFor   // for
 
 	TokenIdent // x
 
@@ -177,6 +179,8 @@ var Keywords = map[string]TokenType{
 	"int":   TokenInt,
 	"if":    TokenIf,
 	"else":  TokenElse,
+	"while": TokenWhile,
+	"for":   TokenFor,
 }
 
 // Scan and return the next token found in the input.

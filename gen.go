@@ -7,6 +7,8 @@ func generateAST(node *ASTNode, reg int, parentASTOp NodeType) int {
 	switch node.op {
 	case NodeIf:
 		return genIFAST(node)
+	case NodeWhile:
+		return genWHILE(node)
 	case NodeGlue:
 		// Do each child statement, and free the
 		// registers after each child
@@ -39,10 +41,11 @@ func generateAST(node *ASTNode, reg int, parentASTOp NodeType) int {
 		// If the parent AST node is an A_IF, generate a compare
 		// followed by a jump. Otherwise, compare registers and
 		// set one to 1 or 0 based on the comparison.
-		if parentASTOp == NodeIf {
+		if parentASTOp == NodeIf || parentASTOp == NodeWhile {
 			return cgcompare_and_jump(node.op, leftreg, rightreg, reg)
+		} else {
+			return cgcompare_and_set(node.op, leftreg, rightreg)
 		}
-		return cgcompare_and_set(node.op, leftreg, rightreg)
 	case NodeIntLiteral:
 		return cgloadint(node.value)
 	case NodeIdent:
@@ -131,4 +134,28 @@ func genIFAST(node *ASTNode) int {
 		cglabel(Lend)
 	}
 	return NoReg
+}
+
+// Generate the code for a WHILE statement
+// and an optional ELSE clause
+func genWHILE(n *ASTNode) int {
+	Lstart, Lend := 0, 0
+	// Generate the start and end labels
+	// and output the start label
+	Lstart = label()
+	Lend = label()
+	cglabel(Lstart)
+	// Generate the condition code followed
+	// by a jump to the end label.
+	// We cheat by sending the Lfalse label as a register.
+	generateAST(n.left, Lend, n.op)
+	genfreeregs()
+	// Generate the compound statement for the body
+	generateAST(n.right, NoReg, n.op)
+	genfreeregs()
+	// Finally output the jump back to the condition,
+	// and the end label
+	cgjump(Lstart)
+	cglabel(Lend)
+	return (NoReg)
 }

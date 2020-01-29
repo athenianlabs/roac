@@ -148,23 +148,24 @@ func cgglobsym(sym string) {
 
 // List of comparison instructions,
 // in AST order: A_EQ, A_NE, A_LT, A_GT, A_LE, A_GE
-var cmplist = []string{
-	"sete",
-	"setne",
-	"setl",
-	"setg",
-	"setle",
-	"setge",
+var cmplist = map[NodeType]string{
+	NodeEqual:              "sete",
+	NodeNotEqual:           "setne",
+	NodeLessThan:           "setl",
+	NodeGreaterThan:        "setg",
+	NodeLessThanOrEqual:    "setle",
+	NodeGreaterThanOrEqual: "setge",
 }
 
 // Compare two registers and set if true.
 func cgcompare_and_set(ASTop NodeType, r1, r2 int) int {
 	// Check the range of the AST operation
-	if ASTop < NodeEqual || ASTop > NodeGreaterThanOrEqual {
+	op, ok := cmplist[ASTop]
+	if !ok {
 		fatal("dad AST Op in cgcompare_and_set()\n")
 	}
 	OutFile.WriteString(fmt.Sprintf("\tcmpq\t%s, %s\n", reglist[r2], reglist[r1]))
-	OutFile.WriteString(fmt.Sprintf("\t%s\t%s\n", cmplist[ASTop-NodeEqual], breglist[r2]))
+	OutFile.WriteString(fmt.Sprintf("\t%s\t%s\n", op, breglist[r2]))
 	OutFile.WriteString(fmt.Sprintf("\tmovzbq\t%s, %s\n", breglist[r2], reglist[r2]))
 	free_register(r1)
 	return (r2)
@@ -172,23 +173,24 @@ func cgcompare_and_set(ASTop NodeType, r1, r2 int) int {
 
 // List of inverted jump instructions,
 // in AST order: A_EQ, A_NE, A_LT, A_GT, A_LE, A_GE
-var invertedcmplist = []string{
-	"jne",
-	"je",
-	"jge",
-	"jle",
-	"jg",
-	"jl",
+var invertedcmplist = map[NodeType]string{
+	NodeEqual:              "jne",
+	NodeNotEqual:           "je",
+	NodeLessThan:           "jge",
+	NodeGreaterThan:        "jle",
+	NodeLessThanOrEqual:    "jg",
+	NodeGreaterThanOrEqual: "jl",
 }
 
 // Compare two registers and jump if false.
 func cgcompare_and_jump(ASTop NodeType, r1, r2, label int) int {
 	// Check the range of the AST operation
-	if ASTop < NodeEqual || ASTop > NodeGreaterThanOrEqual {
+	op, ok := invertedcmplist[ASTop]
+	if !ok {
 		fatal("bad AST Op in cgcompare_and_jump()\n")
 	}
 	OutFile.WriteString(fmt.Sprintf("\tcmpq\t%s, %s\n", reglist[r2], reglist[r1]))
-	OutFile.WriteString(fmt.Sprintf("\t%s\tL%d\n", invertedcmplist[ASTop-NodeEqual], label))
+	OutFile.WriteString(fmt.Sprintf("\t%s\tL%d\n", op, label))
 	freeall_registers()
 	return NoReg
 }

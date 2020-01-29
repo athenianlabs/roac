@@ -22,6 +22,7 @@ const (
 
 	NodeGlue
 	NodeIf
+	NodeWhile
 
 	NodeIdent
 	NodeLvIdent
