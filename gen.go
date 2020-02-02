@@ -3,19 +3,26 @@ package main
 // Given an AST, interpret the
 // operators in it and return
 // a final value.
-func generateAST(node *ASTNode, reg int, parentASTOp NodeType) int {
+func generateAST(node *ASTNode, reg int, parentASTOp OpType) int {
 	switch node.op {
-	case NodeIf:
+	case OpIf:
 		return genIFAST(node)
-	case NodeWhile:
+	case OpWhile:
 		return genWHILE(node)
-	case NodeGlue:
+	case OpGlue:
 		// Do each child statement, and free the
 		// registers after each child
 		generateAST(node.left, NoReg, node.op)
 		genfreeregs()
 		generateAST(node.right, NoReg, node.op)
 		genfreeregs()
+		return NoReg
+	case OpFunction:
+		// Generate the function's preamble before the code
+		sym := GetSymbolByID(node.value)
+		cgfuncpreamble(sym.name)
+		generateAST(node.left, NoReg, node.op)
+		cgfuncpostamble()
 		return NoReg
 	}
 
@@ -29,50 +36,42 @@ func generateAST(node *ASTNode, reg int, parentASTOp NodeType) int {
 	}
 
 	switch node.op {
-	case NodeAdd:
+	case OpAdd:
 		return cgadd(leftreg, rightreg)
-	case NodeSubtract:
+	case OpSubtract:
 		return cgsub(leftreg, rightreg)
-	case NodeMultiply:
+	case OpMultiply:
 		return cgmul(leftreg, rightreg)
-	case NodeDivide:
+	case OpDivide:
 		return cgdiv(leftreg, rightreg)
-	case NodeEqual, NodeNotEqual, NodeLessThan, NodeGreaterThan, NodeLessThanOrEqual, NodeGreaterThanOrEqual:
+	case OpEqual, OpNotEqual, OpLessThan, OpGreaterThan, OpLessThanOrEqual, OpGreaterThanOrEqual:
 		// If the parent AST node is an A_IF, generate a compare
 		// followed by a jump. Otherwise, compare registers and
 		// set one to 1 or 0 based on the comparison.
-		if parentASTOp == NodeIf || parentASTOp == NodeWhile {
+		if parentASTOp == OpIf || parentASTOp == OpWhile {
 			return cgcompare_and_jump(node.op, leftreg, rightreg, reg)
-		} else {
-			return cgcompare_and_set(node.op, leftreg, rightreg)
 		}
-	case NodeIntLiteral:
+		return cgcompare_and_set(node.op, leftreg, rightreg)
+	case OpIntLiteral:
 		return cgloadint(node.value)
-	case NodeIdent:
-		name, _ := GetSymbolByID(node.value)
-		return cgloadglob(name)
-	case NodeLvIdent:
-		name, _ := GetSymbolByID(node.value)
-		return cgstorglob(reg, name)
-	case NodeAssign:
+	case OpIdent:
+		sym := GetSymbolByID(node.value)
+		return cgloadglob(sym)
+	case OpLvIdent:
+		sym := GetSymbolByID(node.value)
+		return cgstorglob(reg, sym)
+	case OpAssign:
 		// The work has already been done, return the result
 		return rightreg
-	case NodePrint:
+	case OpPrint:
 		// Print the left-child's value
 		// and return no register
 		genprintint(leftreg)
 		genfreeregs()
 		return NoReg
-	case NodeFunction:
-		// Generate the function's preamble before the code
-		name, ok := GetSymbolByID(node.value)
-		if !ok {
-			fatal("unknown symbol id %d\n", node.value)
-		}
-		cgfuncpreamble(name)
-		generateAST(node.left, NoReg, node.op)
-		cgfuncpostamble()
-		return NoReg
+	case OpWiden:
+		// Widen the child's type to the parent's type
+		return cgwiden(leftreg, node.left.t, node.t)
 	default:
 		fatal("unknown AST operator %d\n", node.op)
 		return 0
@@ -95,16 +94,16 @@ func genprintint(reg int) {
 	cgprintint(reg)
 }
 
-func genglobsym(s string) {
+func genglobsym(s *Symbol) {
 	cgglobsym(s)
 }
 
-var id int
+var currentLabelId int
 
 // Generate and return a new label number
 func label() int {
-	id++
-	return id
+	currentLabelId++
+	return currentLabelId
 }
 
 // Generate the code for an IF statement

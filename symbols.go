@@ -1,23 +1,52 @@
 package main
 
+import "fmt"
+
 const MaxSymbols = 1024
 
-var symbolTable = make(map[int]string, MaxSymbols)
-var inverseSymbolTable = make(map[string]int, MaxSymbols)
+type Symbol struct {
+	name string
+	t    NodeType
+	st   StructuralNodeType
+	id   int
+}
 
-func AddSymbol(s string) int {
+func (s Symbol) String() string {
+	return fmt.Sprintf("Symbol '%s' ID: %d", s.name, s.id)
+}
+
+var (
+	symbolTable        = make(map[int]*Symbol, MaxSymbols)
+	inverseSymbolTable = make(map[string]int, MaxSymbols)
+)
+
+func AddSymbol(s string, t NodeType, st StructuralNodeType) *Symbol {
+	if _, exists := inverseSymbolTable[s]; exists {
+		fatal("symbol %s already declared", s)
+	}
 	id := len(symbolTable)
-	symbolTable[id] = s
+	symbolTable[id] = &Symbol{
+		name: s,
+		t:    t,
+		st:   st,
+		id:   id,
+	}
 	inverseSymbolTable[s] = id
-	return id
+	return symbolTable[id]
 }
 
-func GetSymbolByID(id int) (string, bool) {
+func GetSymbolByID(id int) *Symbol {
 	s, ok := symbolTable[id]
-	return s, ok
+	if !ok {
+		fatal("symbol with id %d does not exists", id)
+	}
+	return s
 }
 
-func GetSymbolIDByString(s string) (int, bool) {
+func GetSymbolByString(s string) *Symbol {
 	id, ok := inverseSymbolTable[s]
-	return id, ok
+	if !ok {
+		fatal("symbol %s does not exists", s)
+	}
+	return GetSymbolByID(id)
 }

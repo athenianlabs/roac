@@ -41,7 +41,8 @@ const (
 	TokenIdent // x
 
 	TokenPrint // print
-	TokenInt   //int
+	TokenInt   // int
+	TokenChar  // char
 )
 
 // Token structure
@@ -55,6 +56,17 @@ var (
 	Putback rune = '\n'
 	Text         = ""
 )
+
+var Keywords = map[string]TokenType{
+	"print": TokenPrint,
+	"int":   TokenInt,
+	"if":    TokenIf,
+	"else":  TokenElse,
+	"while": TokenWhile,
+	"for":   TokenFor,
+	"void":  TokenVoid,
+	"char":  TokenChar,
+}
 
 const (
 	EOF            rune = -1
@@ -173,16 +185,6 @@ func lparen() {
 
 func rparen() {
 	match(TokenRightParen, ")")
-}
-
-var Keywords = map[string]TokenType{
-	"print": TokenPrint,
-	"int":   TokenInt,
-	"if":    TokenIf,
-	"else":  TokenElse,
-	"while": TokenWhile,
-	"for":   TokenFor,
-	"void":  TokenVoid,
 }
 
 // Scan and return the next token found in the input.

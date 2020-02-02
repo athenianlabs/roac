@@ -2,7 +2,13 @@ package main
 
 import "fmt"
 
-const NoReg = -1
+func write(s string) {
+	OutFile.WriteString(s)
+}
+
+func writef(s string, args ...interface{}) {
+	write(fmt.Sprintf(s, args...))
+}
 
 // List of available registers
 // and their names
@@ -42,30 +48,30 @@ func free_register(reg int) {
 // Print out the assembly preamble
 func cgpreamble() {
 	freeall_registers()
-	OutFile.WriteString("\t.text\n")
-	OutFile.WriteString(".LC0:\n")
-	OutFile.WriteString("\t.string\t\"%d\\n\"\n")
-	OutFile.WriteString("printint:\n")
-	OutFile.WriteString("\tpushq\t%rbp\n")
-	OutFile.WriteString("\tmovq\t%rsp, %rbp\n")
-	OutFile.WriteString("\tsubq\t$16, %rsp\n")
-	OutFile.WriteString("\tmovl\t%edi, -4(%rbp)\n")
-	OutFile.WriteString("\tmovl\t-4(%rbp), %eax\n")
-	OutFile.WriteString("\tmovl\t%eax, %esi\n")
-	OutFile.WriteString("\tleaq	.LC0(%rip), %rdi\n")
-	OutFile.WriteString("\tmovl	$0, %eax\n")
-	OutFile.WriteString("\tcall	printf@PLT\n")
-	OutFile.WriteString("\tnop\n")
-	OutFile.WriteString("\tleave\n")
-	OutFile.WriteString("\tret\n")
-	OutFile.WriteString("\n")
+	write("\t.text\n")
+	write(".LC0:\n")
+	write("\t.string\t\"%d\\n\"\n")
+	write("printint:\n")
+	write("\tpushq\t%rbp\n")
+	write("\tmovq\t%rsp, %rbp\n")
+	write("\tsubq\t$16, %rsp\n")
+	write("\tmovl\t%edi, -4(%rbp)\n")
+	write("\tmovl\t-4(%rbp), %eax\n")
+	write("\tmovl\t%eax, %esi\n")
+	write("\tleaq	.LC0(%rip), %rdi\n")
+	write("\tmovl	$0, %eax\n")
+	write("\tcall	printf@PLT\n")
+	write("\tnop\n")
+	write("\tleave\n")
+	write("\tret\n")
+	write("\n")
 }
 
 // Print out the assembly postamble
 func cgpostamble() {
-	OutFile.WriteString("\tmovl	$0, %eax\n")
-	OutFile.WriteString("\tpopq	%rbp\n")
-	OutFile.WriteString("\tret\n")
+	write("\tmovl	$0, %eax\n")
+	write("\tpopq	%rbp\n")
+	write("\tret\n")
 }
 
 // Load an integer literal value into a register.
@@ -74,14 +80,14 @@ func cgloadint(value int) int {
 	// Get a new register
 	r := alloc_register()
 	// Print out the code to initialise it
-	OutFile.WriteString(fmt.Sprintf("\tmovq\t$%d, %s\n", value, reglist[r]))
+	writef("\tmovq\t$%d, %s\n", value, reglist[r])
 	return r
 }
 
 // Add two registers together and return
 // the number of the register with the result
 func cgadd(r1, r2 int) int {
-	OutFile.WriteString(fmt.Sprintf("\taddq\t%s, %s\n", reglist[r1], reglist[r2]))
+	writef("\taddq\t%s, %s\n", reglist[r1], reglist[r2])
 	free_register(r1)
 	return r2
 }
@@ -89,7 +95,7 @@ func cgadd(r1, r2 int) int {
 // Subtract the second register from the first and
 // return the number of the register with the result
 func cgsub(r1, r2 int) int {
-	OutFile.WriteString(fmt.Sprintf("\tsubq\t%s, %s\n", reglist[r2], reglist[r1]))
+	writef("\tsubq\t%s, %s\n", reglist[r2], reglist[r1])
 	free_register(r2)
 	return r1
 }
@@ -97,7 +103,7 @@ func cgsub(r1, r2 int) int {
 // Multiply two registers together and return
 // the number of the register with the result
 func cgmul(r1, r2 int) int {
-	OutFile.WriteString(fmt.Sprintf("\timulq\t%s, %s\n", reglist[r1], reglist[r2]))
+	writef("\timulq\t%s, %s\n", reglist[r1], reglist[r2])
 	free_register(r1)
 	return r2
 }
@@ -105,114 +111,134 @@ func cgmul(r1, r2 int) int {
 // Divide the first register by the second and
 // return the number of the register with the result
 func cgdiv(r1, r2 int) int {
-	OutFile.WriteString(fmt.Sprintf("\tmovq\t%s,%%rax\n", reglist[r1]))
-	OutFile.WriteString("\tcqo\n")
-	OutFile.WriteString(fmt.Sprintf("\tidivq\t%s\n", reglist[r2]))
-	OutFile.WriteString(fmt.Sprintf("\tmovq\t%%rax,%s\n", reglist[r1]))
+	writef("\tmovq\t%s,%%rax\n", reglist[r1])
+	write("\tcqo\n")
+	writef("\tidivq\t%s\n", reglist[r2])
+	writef("\tmovq\t%%rax,%s\n", reglist[r1])
 	free_register(r2)
 	return r1
 }
 
 // Call printint() with the given register
 func cgprintint(r int) {
-	OutFile.WriteString(fmt.Sprintf("\tmovq\t%s, %%rdi\n", reglist[r]))
-	OutFile.WriteString("\tcall\tprintint\n")
+	writef("\tmovq\t%s, %%rdi\n", reglist[r])
+	write("\tcall\tprintint\n")
 	free_register(r)
 }
 
 // Load a value from a variable into a register.
 // Return the number of the register
-func cgloadglob(ident string) int {
+func cgloadglob(sym *Symbol) int {
 	// Get a new register
 	r := alloc_register()
-	// Print out the code to initialise it
-	OutFile.WriteString(fmt.Sprintf("\tmovq\t%s(%%rip), %s\n", ident, reglist[r]))
+	// Print out the code to initialize it
+	if sym.t == NodeInt {
+		writef("\tmovq\t%s(%%rip), %s\n", sym.name, reglist[r])
+	} else {
+		writef("\tmovzbq\t%s(%%rip), %s\n", sym.name, reglist[r])
+	}
 	return r
 }
 
 // Store a register's value into a variable
-func cgstorglob(r int, ident string) int {
-	OutFile.WriteString(fmt.Sprintf("\tmovq\t%s, %s(%%rip)\n", reglist[r], ident))
+func cgstorglob(r int, sym *Symbol) int {
+	if sym.t == NodeInt {
+		writef("\tmovq\t%s, %s(%%rip)\n", reglist[r], sym.name)
+	} else {
+		writef("\tmovb\t%s, %s(%%rip)\n", breglist[r], sym.name)
+	}
 	return r
 }
 
 // Generate a global symbol
-func cgglobsym(sym string) {
-	OutFile.WriteString(fmt.Sprintf("\t.comm\t%s,8,8\n", sym))
+func cgglobsym(sym *Symbol) {
+	if sym.t == NodeInt {
+		writef("\t.comm\t%s,8,8\n", sym.name)
+	} else {
+		writef("\t.comm\t%s,1,1\n", sym.name)
+	}
+}
+
+// Widen the value in the register from the old
+// to the new type, and return a register with
+// this new value
+func cgwiden(reg int, oldtype, newtype NodeType) int {
+	// Nothing to do
+	return reg
 }
 
 // List of comparison instructions,
 // in AST order: A_EQ, A_NE, A_LT, A_GT, A_LE, A_GE
-var cmplist = map[NodeType]string{
-	NodeEqual:              "sete",
-	NodeNotEqual:           "setne",
-	NodeLessThan:           "setl",
-	NodeGreaterThan:        "setg",
-	NodeLessThanOrEqual:    "setle",
-	NodeGreaterThanOrEqual: "setge",
+var cmplist = map[OpType]string{
+	OpEqual:              "sete",
+	OpNotEqual:           "setne",
+	OpLessThan:           "setl",
+	OpGreaterThan:        "setg",
+	OpLessThanOrEqual:    "setle",
+	OpGreaterThanOrEqual: "setge",
 }
 
 // Compare two registers and set if true.
-func cgcompare_and_set(ASTop NodeType, r1, r2 int) int {
+func cgcompare_and_set(ASTop OpType, r1, r2 int) int {
 	// Check the range of the AST operation
 	op, ok := cmplist[ASTop]
 	if !ok {
 		fatal("dad AST Op in cgcompare_and_set()\n")
 	}
-	OutFile.WriteString(fmt.Sprintf("\tcmpq\t%s, %s\n", reglist[r2], reglist[r1]))
-	OutFile.WriteString(fmt.Sprintf("\t%s\t%s\n", op, breglist[r2]))
-	OutFile.WriteString(fmt.Sprintf("\tmovzbq\t%s, %s\n", breglist[r2], reglist[r2]))
+	writef("\tcmpq\t%s, %s\n", reglist[r2], reglist[r1])
+	writef("\t%s\t%s\n", op, breglist[r2])
+	writef("\tmovzbq\t%s, %s\n", breglist[r2], reglist[r2])
 	free_register(r1)
 	return (r2)
 }
 
 // List of inverted jump instructions,
 // in AST order: A_EQ, A_NE, A_LT, A_GT, A_LE, A_GE
-var invertedcmplist = map[NodeType]string{
-	NodeEqual:              "jne",
-	NodeNotEqual:           "je",
-	NodeLessThan:           "jge",
-	NodeGreaterThan:        "jle",
-	NodeLessThanOrEqual:    "jg",
-	NodeGreaterThanOrEqual: "jl",
+var invertedcmplist = map[OpType]string{
+	OpEqual:              "jne",
+	OpNotEqual:           "je",
+	OpLessThan:           "jge",
+	OpGreaterThan:        "jle",
+	OpLessThanOrEqual:    "jg",
+	OpGreaterThanOrEqual: "jl",
 }
 
 // Compare two registers and jump if false.
-func cgcompare_and_jump(ASTop NodeType, r1, r2, label int) int {
+func cgcompare_and_jump(ASTop OpType, r1, r2, label int) int {
 	// Check the range of the AST operation
 	op, ok := invertedcmplist[ASTop]
 	if !ok {
 		fatal("bad AST Op in cgcompare_and_jump()\n")
 	}
-	OutFile.WriteString(fmt.Sprintf("\tcmpq\t%s, %s\n", reglist[r2], reglist[r1]))
-	OutFile.WriteString(fmt.Sprintf("\t%s\tL%d\n", op, label))
+	writef("\tcmpq\t%s, %s\n", reglist[r2], reglist[r1])
+	writef("\t%s\tL%d\n", op, label)
 	freeall_registers()
 	return NoReg
 }
 
 // Generate a label
 func cglabel(l int) {
-	OutFile.WriteString(fmt.Sprintf("L%d:\n", l))
+	writef("L%d:\n", l)
 }
 
 // Generate a jump to a label
 func cgjump(l int) {
-	OutFile.WriteString(fmt.Sprintf("\tjmp\tL%d\n", l))
+	writef("\tjmp\tL%d\n", l)
 }
 
 // Print out a function preamble
 func cgfuncpreamble(name string) {
-	OutFile.WriteString("\t.text\n")
-	OutFile.WriteString(fmt.Sprintf("\t.globl\t%s\n", name))
-	OutFile.WriteString(fmt.Sprintf("\t.type\t%s, @function\n", name))
-	OutFile.WriteString(fmt.Sprintf("%s:\n", name))
-	OutFile.WriteString("\tpushq\t%rbp\n")
-	OutFile.WriteString("\tmovq\t%rsp, %rbp\n")
+	write("\t.text\n")
+	writef("\t.globl\t%s\n", name)
+	writef("\t.type\t%s, @function\n", name)
+	writef("%s:\n", name)
+	write("\tpushq\t%rbp\n")
+	write("\tmovq\t%rsp, %rbp\n")
 }
 
 // Print out a function postamble
 func cgfuncpostamble() {
-	OutFile.WriteString("\tmovl $0, %eax\n")
-	OutFile.WriteString("\tpopq     %rbp\n")
-	OutFile.WriteString("\tret\n")
+	write("\tmovl $0, %eax\n")
+	write("\tpopq     %rbp\n")
+	write("\tret\n")
 }

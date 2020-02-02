@@ -1,27 +1,35 @@
 package main
 
-func printStatement() *ASTNode {
-	// Match a 'print' as the first token
-	match(TokenPrint, "print")
-	// Parse the following expression and
-	// generate the assembly code
-	tree := binexpr(0)
-	tree = NewUnaryASTNode(NodePrint, tree, 0)
-	// Match the following semicolon
-	// and stop if we are at EOF
-	return tree
-}
-
-// Parse the declaration of a variable
-func varDeclaration() {
-	// Ensure we have an 'int' token followed by an identifier
-	// and a semicolon. Text now has the identifier's name.
-	// Add it as a known identifier
-	match(TokenInt, "int")
-	ident()
-	AddSymbol(Text)
-	genglobsym(Text)
-	semi()
+// Parse a compound statement
+// and return its AST
+func compoundStatement() *ASTNode {
+	var tree, left *ASTNode
+	// Require a left curly bracket
+	lbrace()
+	for {
+		// Parse a single statement
+		tree = singleStatement()
+		// Some statements must be followed by a semicolon
+		if tree != nil && (tree.op == OpPrint || tree.op == OpAssign) {
+			semi()
+		}
+		// For each new tree, either save it in left
+		// if left is empty, or glue the left and the
+		// new tree together
+		if tree != nil {
+			if left == nil {
+				left = tree
+			} else {
+				left = NewASTNode(OpGlue, NodeNone, left, nil, tree, 0)
+			}
+			// When we hit a right curly bracket,
+			// skip past it and return the AST
+			if CurrentToken.token == TokenRightBrace {
+				rbrace()
+				return left
+			}
+		}
+	}
 }
 
 // Parse a single statement
@@ -30,7 +38,7 @@ func singleStatement() *ASTNode {
 	switch CurrentToken.token {
 	case TokenPrint:
 		return printStatement()
-	case TokenInt:
+	case TokenChar, TokenInt:
 		varDeclaration()
 		return nil // No AST generated here
 	case TokenIdent:
@@ -47,20 +55,46 @@ func singleStatement() *ASTNode {
 	return nil
 }
 
+func printStatement() *ASTNode {
+	// Match a 'print' as the first token
+	match(TokenPrint, "print")
+	// Parse the following expression
+	tree := binexpr(0)
+	// Ensure the two types are compatible.
+	_, rightOp, ok := typeCompatible(NodeInt, tree.t, false)
+	if !ok {
+		fatal("incompatible types\n")
+	}
+	// Widen the tree if required.
+	if rightOp != nil {
+		tree = NewUnaryASTNode(*rightOp, NodeInt, tree, 0)
+	}
+	// Make an print AST tree
+	tree = NewUnaryASTNode(OpPrint, NodeNone, tree, 0)
+	// Return the AST
+	return tree
+}
+
 func assignmentStatement() *ASTNode {
 	// Ensure we have an identifier
 	ident()
-	id, exists := GetSymbolIDByString(Text)
-	if !exists {
-		fatal("undeclared variable %s\n", Text)
-	}
-	right := NewLeafASTNode(NodeLvIdent, id)
+	sym := GetSymbolByString(Text)
+	right := NewLeafASTNode(OpLvIdent, sym.t, sym.id)
 	// Ensure we have an equals sign
 	match(TokenAssign, "=")
 	// Parse the following expression
 	left := binexpr(0)
+	// Ensure the two types are compatible.
+	leftOp, _, ok := typeCompatible(left.t, right.t, true)
+	if !ok {
+		fatal("incompatible types\n")
+	}
+	// Widen the left if required.
+	if leftOp != nil {
+		left = NewUnaryASTNode(*leftOp, right.t, left, 0)
+	}
 	// Make an assignment AST tree
-	return NewASTNode(NodeAssign, left, nil, right, 0)
+	return NewASTNode(OpAssign, NodeInt, left, nil, right, 0)
 }
 
 // Parse an IF statement including
@@ -74,7 +108,7 @@ func ifStatement() *ASTNode {
 	// and the ')' following. Ensure
 	// the tree's operation is a comparison.
 	condAST := binexpr(0)
-	if condAST.op < NodeEqual || condAST.op > NodeGreaterThanOrEqual {
+	if condAST.op < OpEqual || condAST.op > OpGreaterThanOrEqual {
 		fatal("bad comparison operator\n")
 	}
 	rparen()
@@ -88,7 +122,7 @@ func ifStatement() *ASTNode {
 		falseAST = compoundStatement()
 	}
 	// Build and return the AST for this statement
-	return NewASTNode(NodeIf, condAST, trueAST, falseAST, 0)
+	return NewASTNode(OpIf, NodeNone, condAST, trueAST, falseAST, 0)
 }
 
 // Parse a WHILE statement
@@ -101,14 +135,14 @@ func whileStatement() *ASTNode {
 	// and the ')' following. Ensure
 	// the tree's operation is a comparison.
 	condAST := binexpr(0)
-	if condAST.op < NodeEqual || condAST.op > NodeGreaterThanOrEqual {
+	if condAST.op < OpEqual || condAST.op > OpGreaterThanOrEqual {
 		fatal("bad comparison operator")
 	}
 	rparen()
 	// Get the AST for the compound statement
 	bodyAST := compoundStatement()
 	// Build and return the AST for this statement
-	return NewASTNode(NodeWhile, condAST, nil, bodyAST, 0)
+	return NewASTNode(OpWhile, NodeNone, condAST, nil, bodyAST, 0)
 }
 
 // Parse a FOR statement
@@ -122,7 +156,7 @@ func forStatement() *ASTNode {
 	semi()
 	// Get the condition and the ';'
 	condAST := binexpr(0)
-	if condAST.op < NodeEqual || condAST.op > NodeGreaterThanOrEqual {
+	if condAST.op < OpEqual || condAST.op > OpGreaterThanOrEqual {
 		fatal("Bad comparison operator")
 	}
 	semi()
@@ -134,58 +168,9 @@ func forStatement() *ASTNode {
 	// For now, all four sub-trees have to be non-NULL.
 	// Later on, we'll change the semantics for when some are missing
 	// Glue the compound statement and the postop tree
-	tree := NewASTNode(NodeGlue, bodyAST, nil, postopAST, 0)
+	tree := NewASTNode(OpGlue, NodeNone, bodyAST, nil, postopAST, 0)
 	// Make a WHILE loop with the condition and this new body
-	tree = NewASTNode(NodeWhile, condAST, nil, tree, 0)
+	tree = NewASTNode(OpWhile, NodeNone, condAST, nil, tree, 0)
 	// And glue the preop tree to the A_WHILE tree
-	return NewASTNode(NodeGlue, preopAST, nil, tree, 0)
-}
-
-// Parse the declaration of a simplistic function
-func functionDeclaration() *ASTNode {
-	// Find the 'void', the identifier, and the '(' ')'.
-	// For now, do nothing with them
-	match(TokenVoid, "void")
-	ident()
-	nameslot := AddSymbol(Text)
-	lparen()
-	rparen()
-
-	// Get the AST tree for the compound statement
-	tree := compoundStatement()
-	// Return an A_FUNCTION node which has the function's nameslot
-	// and the compound statement sub-tree
-	return NewUnaryASTNode(NodeFunction, tree, nameslot)
-}
-
-// Parse a compound statement
-// and return its AST
-func compoundStatement() *ASTNode {
-	var tree, left *ASTNode
-	// Require a left curly bracket
-	lbrace()
-	for {
-		// Parse a single statement
-		tree = singleStatement()
-		// Some statements must be followed by a semicolon
-		if tree != nil && (tree.op == NodePrint || tree.op == NodeAssign) {
-			semi()
-		}
-		// For each new tree, either save it in left
-		// if left is empty, or glue the left and the
-		// new tree together
-		if tree != nil {
-			if left == nil {
-				left = tree
-			} else {
-				left = NewASTNode(NodeGlue, left, nil, tree, 0)
-			}
-			// When we hit a right curly bracket,
-			// skip past it and return the AST
-			if CurrentToken.token == TokenRightBrace {
-				rbrace()
-				return left
-			}
-		}
-	}
+	return NewASTNode(OpGlue, NodeNone, preopAST, nil, tree, 0)
 }
