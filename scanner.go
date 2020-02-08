@@ -27,6 +27,9 @@ const (
 	TokenGreaterThan                  // >
 	TokenGreaterThanOrEqual           // >=
 
+	TokenAmpersand // &
+	TokenAnd       // &&
+
 	TokenLeftBrace  // {
 	TokenRightBrace // }
 	TokenLeftParen  // (
@@ -269,6 +272,14 @@ func scan(t *Token) bool {
 		} else {
 			putback(c)
 			t.token = TokenGreaterThan
+		}
+	case '&':
+		c = next()
+		if c == '&' {
+			t.token = TokenAnd
+		} else {
+			putback(c)
+			t.token = TokenAmpersand
 		}
 	default:
 		if unicode.IsDigit(c) {

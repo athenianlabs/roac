@@ -50,6 +50,40 @@ func funccall() *ASTNode {
 	return (tree)
 }
 
+// Parse a prefix expression and return
+// a sub-tree representing it.
+func prefix() *ASTNode {
+	switch CurrentToken.token {
+	case TokenAmpersand:
+		// Get the next token and parse it
+		// recursively as a prefix expression
+		scan(CurrentToken)
+		tree := prefix()
+		// Ensure that it's an identifier
+		if tree.op != OpIdent {
+			fatal("& operator must be followed by an identifier\n")
+		}
+		// Now change the operator to A_ADDR and the type to
+		// a pointer to the original type
+		tree.op = OpAddress
+		tree.t = pointerTo(tree.t)
+		return tree
+	case TokenStar:
+		// Get the next token and parse it
+		// recursively as a prefix expression
+		scan(CurrentToken)
+		tree := prefix()
+		// For now, ensure it's either another deref or an
+		// identifier
+		if tree.op != OpIdent && tree.op != OpDereference {
+			fatal("* operator must be followed by an identifier or *\n")
+		}
+		// Prepend an OpDereference operation to the tree
+		return NewUnaryASTNode(OpDereference, valueAt(tree.t), tree, 0)
+	}
+	return primary()
+}
+
 // Parse a primary factor and return an
 // AST node representing it.
 func primary() *ASTNode {
@@ -91,7 +125,7 @@ func primary() *ASTNode {
 func binexpr(previousTokenPrecedence int) *ASTNode {
 	// Get the integer literal on the left.
 	// Fetch the next token at the same time.
-	left := primary()
+	left := prefix()
 	tokenType := CurrentToken.token
 	// If no tokens left, return just the left node
 	if tokenType == TokenSemicolon || tokenType == TokenRightParen {

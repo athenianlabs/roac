@@ -1,12 +1,11 @@
-int fred() {
-  return(20);
-}
-
 int main() {
-  int result;
-  printint(10);
-  result= fred(15);
-  printint(result);
-  printint(fred(15)+10);
+  char  a; char *b; char  c;
+  int   d; int  *e; int   f;
+
+  a= 18; printint(a);
+  b= &a; c= *b; printint(c);
+
+  d= 12; printint(d);
+  e= &d; f= *e; printint(f);
   return(0);
 }

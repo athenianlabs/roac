@@ -79,6 +79,12 @@ func generateAST(node *ASTNode, reg int, parentASTOp OpType) int {
 	case OpFunctionCall:
 		sym := GetSymbolByID(node.value)
 		return cgcall(leftreg, sym)
+
+	case OpAddress:
+		sym := GetSymbolByID(node.value)
+		return cgaddress(sym)
+	case OpDereference:
+		return cgderef(leftreg, node.left.t)
 	default:
 		fatal("unknown AST operator %d\n", node.op)
 		return 0

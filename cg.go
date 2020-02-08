@@ -137,7 +137,7 @@ func cgloadglob(sym *Symbol) int {
 		writef("\tmovzbq\t%s(%%rip), %s\n", sym.name, reglist[r])
 	case NodeInt:
 		writef("\tmovzbl\t%s(%%rip), %s\n", sym.name, reglist[r])
-	case NodeLong:
+	case NodeLong, NodeCharPointer, NodeIntPointer, NodeLongPointer:
 		writef("\tmovq\t%s(%%rip), %s\n", sym.name, reglist[r])
 	default:
 		fatal("bad type in cgloadglob %v\n", sym.t)
@@ -152,7 +152,7 @@ func cgstorglob(r int, sym *Symbol) int {
 		writef("\tmovb\t%s, %s(%%rip)\n", breglist[r], sym.name)
 	case NodeInt:
 		writef("\tmovl\t%s, %s(%%rip)\n", dreglist[r], sym.name)
-	case NodeLong:
+	case NodeLong, NodeCharPointer, NodeIntPointer, NodeLongPointer:
 		writef("\tmovq\t%s, %s(%%rip)\n", reglist[r], sym.name)
 	default:
 		fatal("bad type in cgloadglob %v\n", sym.t)
@@ -252,11 +252,15 @@ func cgfuncpostamble(sym *Symbol) {
 // Array of type sizes in P_XXX order.
 // 0 means no size. P_NONE, P_VOID, P_CHAR, P_INT, P_LONG
 var typeSizes = map[NodeType]int{
-	NodeNone: 0,
-	NodeVoid: 0,
-	NodeChar: 1,
-	NodeInt:  4,
-	NodeLong: 8,
+	NodeNone:        0,
+	NodeVoid:        0,
+	NodeChar:        1,
+	NodeInt:         4,
+	NodeLong:        8,
+	NodeVoidPointer: 8,
+	NodeCharPointer: 8,
+	NodeIntPointer:  8,
+	NodeLongPointer: 8,
 }
 
 // Given a P_XXX type value, return the
@@ -265,7 +269,7 @@ func cgprimsize(t NodeType) int {
 	// Check the type is valid
 	size, ok := typeSizes[t]
 	if !ok {
-		fatal("Bad type in cgprimsize()\n")
+		fatal("Bad type in cgprimsize() %v\n", t)
 	}
 	return size
 }
@@ -299,4 +303,24 @@ func cgreturn(reg int, sym *Symbol) {
 		fatal("Bad function type in cgreturn %v\n", sym.t)
 	}
 	cgjump(sym.endLabel)
+}
+
+// Generate code to load the address of a global
+// identifier into a variable. Return a new register
+func cgaddress(sym *Symbol) int {
+	r := alloc_register()
+	writef("\tleaq\t%s(%%rip), %s\n", sym.name, reglist[r])
+	return r
+}
+
+// Dereference a pointer to get the value it
+// pointing at into the same register
+func cgderef(r int, t NodeType) int {
+	switch t {
+	case NodeCharPointer:
+		writef("\tmovzbq\t(%s), %s\n", reglist[r], reglist[r])
+	case NodeIntPointer, NodeLongPointer:
+		writef("\tmovq\t(%s), %s\n", reglist[r], reglist[r])
+	}
+	return r
 }

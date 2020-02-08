@@ -1,28 +1,9 @@
 package main
 
-// Parse the current token and
-// return a primitive type enum value
-func parseType(t TokenType) NodeType {
-	switch t {
-	case TokenChar:
-		return NodeChar
-	case TokenInt:
-		return NodeInt
-	case TokenLong:
-		return NodeLong
-	case TokenVoid:
-		return NodeVoid
-	default:
-		fatal("Illegal type, token %d\n", t)
-	}
-	return 0
-}
-
 // Parse the declaration of a variable
 func varDeclaration() {
 	// Get the type of the variable, then the identifier
-	t := parseType(CurrentToken.token)
-	scan(CurrentToken)
+	t := parseType()
 	ident()
 	sym := AddSymbol(Text, t, NodeVariable, 0)
 	genglobsym(sym)
@@ -32,8 +13,7 @@ func varDeclaration() {
 // Parse the declaration of a simplistic function
 func functionDeclaration() *ASTNode {
 	// Get the type of the variable, then the identifier
-	t := parseType(CurrentToken.token)
-	scan(CurrentToken)
+	t := parseType()
 	ident()
 
 	// Get a label-id for the end label, add the function

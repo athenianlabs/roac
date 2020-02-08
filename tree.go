@@ -10,6 +10,10 @@ const (
 	NodeChar
 	NodeInt
 	NodeLong
+	NodeVoidPointer
+	NodeCharPointer
+	NodeIntPointer
+	NodeLongPointer
 )
 
 type StructuralNodeType int
@@ -51,6 +55,9 @@ const (
 	OpAssign
 	OpPrint
 	OpWiden
+
+	OpAddress
+	OpDereference
 )
 
 // Abstract Syntax Tree structure
