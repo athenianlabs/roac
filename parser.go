@@ -1,6 +1,9 @@
 package main
 
-var CurrentToken = &Token{}
+var (
+	CurrentToken  = new(Token)
+	RejectedToken *Token
+)
 
 // Operator precedence for each token
 var OperatorPrecedence = map[TokenType]int{
@@ -26,6 +29,62 @@ func OpPrecedence(t TokenType) int {
 		fatal("syntax error on line %d, token %d\n", Line, t)
 	}
 	return prec
+}
+
+// Parse a function call with a single expression
+// argument and return its AST
+func funccall() *ASTNode {
+	// Check that the identifier has been defined,
+	// then make a leaf node for it. XXX Add structural type test
+	sym := GetSymbolByString(Text)
+	// Get the '('
+	lparen()
+	// Parse the following expression
+	tree := binexpr(0)
+	// Build the function call AST node. Store the
+	// function's return type as this node's type.
+	// Also record the function's symbol-id
+	tree = NewUnaryASTNode(OpFunctionCall, sym.t, tree, sym.id)
+	// Get the ')'
+	rparen()
+	return (tree)
+}
+
+// Parse a primary factor and return an
+// AST node representing it.
+func primary() *ASTNode {
+	var node *ASTNode
+	// For an INTLIT token, make a leaf AST node for it
+	// and scan in the next token. Otherwise, a syntax error
+	// for any other token type.
+	switch CurrentToken.token {
+	case TokenIntLiteral:
+		// For an INTLIT token, make a leaf AST node for it.
+		// Make it a P_CHAR if it's within the P_CHAR range
+		if CurrentToken.value >= 0 && CurrentToken.value < 256 {
+			node = NewLeafASTNode(OpIntLiteral, NodeChar, CurrentToken.value)
+		} else {
+			node = NewLeafASTNode(OpIntLiteral, NodeInt, CurrentToken.value)
+		}
+	case TokenIdent:
+		// This could be a variable or a function call.
+		// Scan in the next token to find out
+		scan(CurrentToken)
+		// It's a '(', so a function call
+		if CurrentToken.token == TokenLeftParen {
+			return funccall()
+		}
+		// Not a function call, so reject the new token
+		rejectToken(CurrentToken)
+		// Continue on with normal variable parsing
+		sym := GetSymbolByString(Text)
+		node = NewLeafASTNode(OpIdent, sym.t, sym.id)
+	default:
+		fatal("syntax error on line %d\n", Line)
+		return nil
+	}
+	scan(CurrentToken)
+	return node
 }
 
 // Return an AST tree whose root is a binary operator
@@ -71,33 +130,6 @@ func binexpr(previousTokenPrecedence int) *ASTNode {
 	// Return the tree we have when the precedence
 	// is the same or lower
 	return left
-}
-
-// Parse a primary factor and return an
-// AST node representing it.
-func primary() *ASTNode {
-	var node *ASTNode
-	// For an INTLIT token, make a leaf AST node for it
-	// and scan in the next token. Otherwise, a syntax error
-	// for any other token type.
-	switch CurrentToken.token {
-	case TokenIntLiteral:
-		// For an INTLIT token, make a leaf AST node for it.
-		// Make it a P_CHAR if it's within the P_CHAR range
-		if CurrentToken.value >= 0 && CurrentToken.value < 256 {
-			node = NewLeafASTNode(OpIntLiteral, NodeChar, CurrentToken.value)
-		} else {
-			node = NewLeafASTNode(OpIntLiteral, NodeInt, CurrentToken.value)
-		}
-	case TokenIdent:
-		sym := GetSymbolByString(Text)
-		node = NewLeafASTNode(OpIdent, sym.t, sym.id)
-	default:
-		fatal("syntax error on line %d\n", Line)
-		return nil
-	}
-	scan(CurrentToken)
-	return node
 }
 
 // Convert a token into an AST operation.

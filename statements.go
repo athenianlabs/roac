@@ -10,7 +10,7 @@ func compoundStatement() *ASTNode {
 		// Parse a single statement
 		tree = singleStatement()
 		// Some statements must be followed by a semicolon
-		if tree != nil && (tree.op == OpPrint || tree.op == OpAssign) {
+		if tree != nil && (tree.op == OpPrint || tree.op == OpAssign || tree.op == OpReturn || tree.op == OpFunctionCall) {
 			semi()
 		}
 		// For each new tree, either save it in left
@@ -38,7 +38,7 @@ func singleStatement() *ASTNode {
 	switch CurrentToken.token {
 	case TokenPrint:
 		return printStatement()
-	case TokenChar, TokenInt:
+	case TokenChar, TokenInt, TokenLong:
 		varDeclaration()
 		return nil // No AST generated here
 	case TokenIdent:
@@ -49,6 +49,8 @@ func singleStatement() *ASTNode {
 		return whileStatement()
 	case TokenFor:
 		return forStatement()
+	case TokenReturn:
+		return returnStatement()
 	default:
 		fatal("Syntax error, token %d\n", CurrentToken.token)
 	}
@@ -78,6 +80,12 @@ func printStatement() *ASTNode {
 func assignmentStatement() *ASTNode {
 	// Ensure we have an identifier
 	ident()
+	// This could be a variable or a function call.
+	// If next token is '(', it's a function call
+	if CurrentToken.token == TokenLeftParen {
+		return funccall()
+	}
+	// Not a function call, on with an assignment then!
 	sym := GetSymbolByString(Text)
 	right := NewLeafASTNode(OpLvIdent, sym.t, sym.id)
 	// Ensure we have an equals sign
@@ -173,4 +181,34 @@ func forStatement() *ASTNode {
 	tree = NewASTNode(OpWhile, NodeNone, condAST, nil, tree, 0)
 	// And glue the preop tree to the A_WHILE tree
 	return NewASTNode(OpGlue, NodeNone, preopAST, nil, tree, 0)
+}
+
+// Parse a return statement and return its AST
+func returnStatement() *ASTNode {
+	sym := GetSymbolByID(FunctionId)
+	// Can't return a value if function returns P_VOID
+	if sym.t == NodeVoid {
+		fatal("Can't return from a void function\n")
+	}
+	// Ensure we have 'return' '('
+	match(TokenReturn, "return")
+	lparen()
+	// Parse the following expression
+	tree := binexpr(0)
+	// Ensure this is compatible with the function's type
+	returnType := tree.t
+	funcType := sym.t
+	_, rightOp, ok := typeCompatible(returnType, funcType, true)
+	if !ok {
+		fatal("incompatible types\n")
+	}
+	// Widen the left if required.
+	if rightOp != nil {
+		tree = NewUnaryASTNode(*rightOp, funcType, tree, 0)
+	}
+	// Add on the A_RETURN node
+	tree = NewUnaryASTNode(OpReturn, NodeNone, tree, 0)
+	// Get the ')'
+	rparen()
+	return tree
 }

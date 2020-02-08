@@ -9,6 +9,7 @@ const (
 	NodeVoid
 	NodeChar
 	NodeInt
+	NodeLong
 )
 
 type StructuralNodeType int
@@ -42,6 +43,8 @@ const (
 	OpIf
 	OpWhile
 	OpFunction
+	OpFunctionCall
+	OpReturn
 
 	OpIdent
 	OpLvIdent

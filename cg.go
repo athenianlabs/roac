@@ -15,6 +15,7 @@ func writef(s string, args ...interface{}) {
 var freereg = [4]int{}
 var reglist = [4]string{"%r8", "%r9", "%r10", "%r11"}
 var breglist = [4]string{"%r8b", "%r9b", "%r10b", "%r11b"}
+var dreglist = [4]string{"%r8d", "%r9d", "%r10d", "%r11d"}
 
 // Set all registers as available
 func freeall_registers() {
@@ -131,32 +132,38 @@ func cgprintint(r int) {
 func cgloadglob(sym *Symbol) int {
 	// Get a new register
 	r := alloc_register()
-	// Print out the code to initialize it
-	if sym.t == NodeInt {
-		writef("\tmovq\t%s(%%rip), %s\n", sym.name, reglist[r])
-	} else {
+	switch sym.t {
+	case NodeChar:
 		writef("\tmovzbq\t%s(%%rip), %s\n", sym.name, reglist[r])
+	case NodeInt:
+		writef("\tmovzbl\t%s(%%rip), %s\n", sym.name, reglist[r])
+	case NodeLong:
+		writef("\tmovq\t%s(%%rip), %s\n", sym.name, reglist[r])
+	default:
+		fatal("bad type in cgloadglob %v\n", sym.t)
 	}
 	return r
 }
 
 // Store a register's value into a variable
 func cgstorglob(r int, sym *Symbol) int {
-	if sym.t == NodeInt {
-		writef("\tmovq\t%s, %s(%%rip)\n", reglist[r], sym.name)
-	} else {
+	switch sym.t {
+	case NodeChar:
 		writef("\tmovb\t%s, %s(%%rip)\n", breglist[r], sym.name)
+	case NodeInt:
+		writef("\tmovl\t%s, %s(%%rip)\n", dreglist[r], sym.name)
+	case NodeLong:
+		writef("\tmovq\t%s, %s(%%rip)\n", reglist[r], sym.name)
+	default:
+		fatal("bad type in cgloadglob %v\n", sym.t)
 	}
 	return r
 }
 
 // Generate a global symbol
 func cgglobsym(sym *Symbol) {
-	if sym.t == NodeInt {
-		writef("\t.comm\t%s,8,8\n", sym.name)
-	} else {
-		writef("\t.comm\t%s,1,1\n", sym.name)
-	}
+	typeSize := cgprimsize(sym.t)
+	writef("\t.comm\t%s,%d,%d\n", sym.name, typeSize, typeSize)
 }
 
 // Widen the value in the register from the old
@@ -237,8 +244,59 @@ func cgfuncpreamble(name string) {
 }
 
 // Print out a function postamble
-func cgfuncpostamble() {
-	write("\tmovl $0, %eax\n")
-	write("\tpopq     %rbp\n")
-	write("\tret\n")
+func cgfuncpostamble(sym *Symbol) {
+	cglabel(sym.endLabel)
+	write("\tpopq %rbp\n\tret\n")
+}
+
+// Array of type sizes in P_XXX order.
+// 0 means no size. P_NONE, P_VOID, P_CHAR, P_INT, P_LONG
+var typeSizes = map[NodeType]int{
+	NodeNone: 0,
+	NodeVoid: 0,
+	NodeChar: 1,
+	NodeInt:  4,
+	NodeLong: 8,
+}
+
+// Given a P_XXX type value, return the
+// size of a primitive type in bytes.
+func cgprimsize(t NodeType) int {
+	// Check the type is valid
+	size, ok := typeSizes[t]
+	if !ok {
+		fatal("Bad type in cgprimsize()\n")
+	}
+	return size
+}
+
+// Call a function with one argument from the given register
+// Return the register with the result
+func cgcall(r int, sym *Symbol) int {
+	// Get a new register
+	outr := alloc_register()
+	writef("\tmovq\t%s, %%rdi\n", reglist[r])
+	writef("\tcall\t%s\n", sym.name)
+	writef("\tmovq\t%%rax, %s\n", reglist[outr])
+	free_register(r)
+	return outr
+}
+
+// Generate code to return a value from a function
+func cgreturn(reg int, sym *Symbol) {
+	// Generate code depending on the function's type
+	switch sym.t {
+	case NodeChar:
+		writef("\tmovzbl\t%s, %%eax\n", breglist[reg])
+		break
+	case NodeInt:
+		writef("\tmovl\t%s, %%eax\n", dreglist[reg])
+		break
+	case NodeLong:
+		writef("\tmovq\t%s, %%rax\n", reglist[reg])
+		break
+	default:
+		fatal("Bad function type in cgreturn %v\n", sym.t)
+	}
+	cgjump(sym.endLabel)
 }

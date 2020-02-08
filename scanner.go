@@ -40,9 +40,11 @@ const (
 
 	TokenIdent // x
 
-	TokenPrint // print
-	TokenInt   // int
-	TokenChar  // char
+	TokenPrint  // print
+	TokenInt    // int
+	TokenChar   // char
+	TokenLong   // long
+	TokenReturn // return
 )
 
 // Token structure
@@ -52,20 +54,23 @@ type Token struct {
 }
 
 var (
-	Line    int  = 1
-	Putback rune = '\n'
-	Text         = ""
+	Line       int  = 1
+	Putback    rune = '\n'
+	Text            = ""
+	FunctionId int  = -1
 )
 
 var Keywords = map[string]TokenType{
-	"print": TokenPrint,
-	"int":   TokenInt,
-	"if":    TokenIf,
-	"else":  TokenElse,
-	"while": TokenWhile,
-	"for":   TokenFor,
-	"void":  TokenVoid,
-	"char":  TokenChar,
+	"print":  TokenPrint,
+	"int":    TokenInt,
+	"if":     TokenIf,
+	"else":   TokenElse,
+	"while":  TokenWhile,
+	"for":    TokenFor,
+	"void":   TokenVoid,
+	"char":   TokenChar,
+	"long":   TokenLong,
+	"return": TokenReturn,
 }
 
 const (
@@ -187,9 +192,23 @@ func rparen() {
 	match(TokenRightParen, ")")
 }
 
+// Reject the token that we just scanned
+func rejectToken(t *Token) {
+	if RejectedToken != nil {
+		fatal("can't reject token twice\n")
+	}
+	RejectedToken = t
+}
+
 // Scan and return the next token found in the input.
 // Return 1 if token valid, 0 if no tokens left.
 func scan(t *Token) bool {
+	// If we have any rejected token, return it
+	if RejectedToken != nil {
+		t = RejectedToken
+		RejectedToken = nil
+		return true
+	}
 	// Skip whitespace
 	c := skip()
 	// Determine the token based on

@@ -13,18 +13,25 @@ func typeCompatible(left, right NodeType, onlyRight bool) (*OpType, *OpType, boo
 	if left == right {
 		return nil, nil, true
 	}
-	// Widen NodeChars to NodeInts as required
-	if left == NodeChar && right == NodeInt {
+	// Get the sizes for each type
+	leftSize := genprimsize(left)
+	rightSize := genprimsize(right)
+	// Types with zero size are not compatible with anything
+	if leftSize == 0 || rightSize == 0 {
+		return nil, nil, false
+	}
+	// Widen types as required
+	if leftSize < rightSize {
 		t := OpWiden
 		return &t, nil, true
 	}
-	if left == NodeInt && right == NodeChar {
+	if rightSize < leftSize {
 		if onlyRight {
 			return nil, nil, false
 		}
 		t := OpWiden
 		return nil, &t, true
 	}
-	// Anything remaining is compatible
+	// Anything remaining is the same size and thus compatible
 	return nil, nil, true
 }

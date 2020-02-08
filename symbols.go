@@ -5,10 +5,11 @@ import "fmt"
 const MaxSymbols = 1024
 
 type Symbol struct {
-	name string
-	t    NodeType
-	st   StructuralNodeType
-	id   int
+	name     string
+	t        NodeType
+	st       StructuralNodeType
+	id       int
+	endLabel int
 }
 
 func (s Symbol) String() string {
@@ -20,16 +21,17 @@ var (
 	inverseSymbolTable = make(map[string]int, MaxSymbols)
 )
 
-func AddSymbol(s string, t NodeType, st StructuralNodeType) *Symbol {
+func AddSymbol(s string, t NodeType, st StructuralNodeType, endLabel int) *Symbol {
 	if _, exists := inverseSymbolTable[s]; exists {
 		fatal("symbol %s already declared", s)
 	}
 	id := len(symbolTable)
 	symbolTable[id] = &Symbol{
-		name: s,
-		t:    t,
-		st:   st,
-		id:   id,
+		name:     s,
+		t:        t,
+		st:       st,
+		id:       id,
+		endLabel: endLabel,
 	}
 	inverseSymbolTable[s] = id
 	return symbolTable[id]

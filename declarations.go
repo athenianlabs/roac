@@ -8,6 +8,8 @@ func parseType(t TokenType) NodeType {
 		return NodeChar
 	case TokenInt:
 		return NodeInt
+	case TokenLong:
+		return NodeLong
 	case TokenVoid:
 		return NodeVoid
 	default:
@@ -22,24 +24,44 @@ func varDeclaration() {
 	t := parseType(CurrentToken.token)
 	scan(CurrentToken)
 	ident()
-	sym := AddSymbol(Text, t, NodeVariable)
+	sym := AddSymbol(Text, t, NodeVariable, 0)
 	genglobsym(sym)
 	semi()
 }
 
 // Parse the declaration of a simplistic function
 func functionDeclaration() *ASTNode {
-	// Find the 'void', the identifier, and the '(' ')'.
-	// For now, do nothing with them
-	match(TokenVoid, "void")
+	// Get the type of the variable, then the identifier
+	t := parseType(CurrentToken.token)
+	scan(CurrentToken)
 	ident()
-	sym := AddSymbol(Text, NodeVoid, NodeFunction)
+
+	// Get a label-id for the end label, add the function
+	// to the symbol table, and set the Functionid global
+	// to the function's symbol-id
+	sym := AddSymbol(Text, t, NodeFunction, label())
+	FunctionId = sym.id
+
+	// Scan in the parentheses
 	lparen()
 	rparen()
 
 	// Get the AST tree for the compound statement
 	tree := compoundStatement()
+
+	// If the function type isn't P_VOID, check that
+	// the last AST operation in the compound statement
+	// was a return statement
+	if t != NodeVoid {
+		finalstmt := tree
+		if tree.op == OpGlue {
+			finalstmt = tree.right
+		}
+		if finalstmt == nil || finalstmt.op != OpReturn {
+			fatal("No return for function with non-void type\n")
+		}
+	}
 	// Return an A_FUNCTION node which has the function's nameslot
 	// and the compound statement sub-tree
-	return NewUnaryASTNode(OpFunction, NodeVoid, tree, sym.id)
+	return NewUnaryASTNode(OpFunction, t, tree, sym.id)
 }

@@ -22,7 +22,7 @@ func generateAST(node *ASTNode, reg int, parentASTOp OpType) int {
 		sym := GetSymbolByID(node.value)
 		cgfuncpreamble(sym.name)
 		generateAST(node.left, NoReg, node.op)
-		cgfuncpostamble()
+		cgfuncpostamble(sym)
 		return NoReg
 	}
 
@@ -72,6 +72,13 @@ func generateAST(node *ASTNode, reg int, parentASTOp OpType) int {
 	case OpWiden:
 		// Widen the child's type to the parent's type
 		return cgwiden(leftreg, node.left.t, node.t)
+	case OpReturn:
+		sym := GetSymbolByID(FunctionId)
+		cgreturn(leftreg, sym)
+		return NoReg
+	case OpFunctionCall:
+		sym := GetSymbolByID(node.value)
+		return cgcall(leftreg, sym)
 	default:
 		fatal("unknown AST operator %d\n", node.op)
 		return 0
@@ -96,6 +103,10 @@ func genprintint(reg int) {
 
 func genglobsym(s *Symbol) {
 	cgglobsym(s)
+}
+
+func genprimsize(t NodeType) int {
+	return cgprimsize(t)
 }
 
 var currentLabelId int

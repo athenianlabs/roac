@@ -1,10 +1,12 @@
-void main()
-{
-  int i; char j;
+int fred() {
+  return(20);
+}
 
-  j= 20; print j;
-  i= 10; print i;
-
-  for (i= 1;   i <= 5; i= i + 1) { print i; }
-  for (j= 253; j != 2; j= j + 1) { print j; }
+int main() {
+  int result;
+  printint(10);
+  result= fred(15);
+  printint(result);
+  printint(fred(15)+10);
+  return(0);
 }

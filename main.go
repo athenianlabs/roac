@@ -29,6 +29,9 @@ func main() {
 	defer outFile.Close()
 	OutFile = bufio.NewWriter(outFile)
 
+	// For now, ensure that void printint() is defined
+	AddSymbol("printint", NodeChar, NodeFunction, 0)
+
 	scan(CurrentToken) // Get the first token from the input
 	genpreamble()      // Output the preamble
 	for {              // Parse a function and
