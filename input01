@@ -1,9 +1,10 @@
-int main() {
-  char  a; char *b; char  c;
-  int   d; int  *e; int   f;
+int   d, f;
+int  *e;
 
-  a= 18; printint(a);
-  b= &a; c= *b; printint(c);
+int main() {
+  int a, b, c;
+  b= 3; c= 5; a= b + c * 10;
+  printint(a);
 
   d= 12; printint(d);
   e= &d; f= *e; printint(f);

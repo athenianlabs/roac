@@ -39,7 +39,12 @@ func singleStatement() *ASTNode {
 	case TokenPrint:
 		return printStatement()
 	case TokenChar, TokenInt, TokenLong:
-		varDeclaration()
+		// The beginning of a variable declaration.
+		// Parse the type and get the identifier.
+		// Then parse the rest of the declaration.
+		t := parseType()
+		ident()
+		varDeclaration(t)
 		return nil // No AST generated here
 	case TokenIdent:
 		return assignmentStatement()

@@ -29,6 +29,7 @@ const (
 
 	TokenAmpersand // &
 	TokenAnd       // &&
+	TokenComma     // ,
 
 	TokenLeftBrace  // {
 	TokenRightBrace // }
@@ -214,8 +215,7 @@ func scan(t *Token) bool {
 	}
 	// Skip whitespace
 	c := skip()
-	// Determine the token based on
-	// the input character
+	// Determine the token based on the input character
 	switch c {
 	case EOF:
 		t.token = TokenEOF
@@ -232,15 +232,14 @@ func scan(t *Token) bool {
 		t.token = TokenSemicolon
 	case '{':
 		t.token = TokenLeftBrace
-		break
 	case '}':
 		t.token = TokenRightBrace
-		break
 	case '(':
 		t.token = TokenLeftParen
-		break
 	case ')':
 		t.token = TokenRightParen
+	case ',':
+		t.token = TokenComma
 	case '=':
 		c = next()
 		if c == '=' {

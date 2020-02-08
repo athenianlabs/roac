@@ -32,15 +32,10 @@ func main() {
 	// For now, ensure that void printint() is defined
 	AddSymbol("printint", NodeChar, NodeFunction, 0)
 
-	scan(CurrentToken) // Get the first token from the input
-	genpreamble()      // Output the preamble
-	for {              // Parse a function and
-		tree := functionDeclaration()
-		generateAST(tree, NoReg, 0)         // generate the assembly code for it
-		if CurrentToken.token == TokenEOF { // Stop when we have reached EOF
-			break
-		}
-	}
+	scan(CurrentToken)   // Get the first token from the input
+	genpreamble()        // Output the preamble
+	globalDeclarations() // Parse the global declarations
+	genpostamble()       // Output the postamble
 
 	if err := OutFile.Flush(); err != nil {
 		fatal("unable to write to out.s: %v\n", err)

@@ -70,9 +70,6 @@ func cgpreamble() {
 
 // Print out the assembly postamble
 func cgpostamble() {
-	write("\tmovl	$0, %eax\n")
-	write("\tpopq	%rbp\n")
-	write("\tret\n")
 }
 
 // Load an integer literal value into a register.
